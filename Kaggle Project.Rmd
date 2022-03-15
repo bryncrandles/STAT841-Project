@@ -1,0 +1,107 @@
+---
+title: "Kaggle Project"
+author: "Abetare Marevci"
+date: "22/02/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(mice)
+setwd("C://Users//abbym//Documents//STAT841//Kaggle Report")
+data <- read.csv("C://Users//abbym//Documents//STAT841//Kaggle Report//train.csv")
+test <- read.csv("C://Users//abbym//Documents//STAT841//Kaggle Report//test.csv")
+#data
+# nrow(data)
+# ncol(data)
+wholedata <- rbind(data[,-1209], test)
+threshold <- 0.85
+names(wholedata)[sapply(wholedata, function(x) mean(is.na(x)) > threshold)]
+
+thresholdmissing <- unname(which(sapply(wholedata, function(x) mean(is.na(x)) > threshold)))
+thresholdmissing
+wholedata <- wholedata[ , -thresholdmissing]
+head(wholedata)
+head(data)
+# allmissingdata <- sapply(wholedata, function(x) sum(is.na(x)))
+# allmissing <- unname(which(allmissingdata==dim(wholedata)[1]))
+
+newdata <- wholedata[,-missing]
+train <- cbind(wholedata[1:nrow(data), ], data[, 1209, drop = FALSE])
+test <- wholedata[(nrow(data) + 1):nrow(wholedata), ]
+
+
+
+missingdatatrain <- sapply(train, function(x) sum(is.na(x)))
+missingtrain <- unname(which(missingdatatrain == dim(train)[1]))
+missingtrain
+
+missingdatatest <- sapply(test, function(x) sum(is.na(x)))
+missingtest <- unname(which(missingdatatest == dim(test)))
+missingtest
+
+
+#md.pattern(data, rotate.names=TRUE)
+# md.pattern(data[1:100,1:10], rotate.names=TRUE)
+# 
+# which(colnames(data) == "x96")
+# data <- data[]
+library(caret)
+library(imputeMissings)
+#preProcValues2 <- preProcess(newdata, method = "medianImpute")
+
+trainimpute <- impute(train, method="median/mode")
+str(trainimpute$health)
+trainimpute$health <- as.factor(trainimpute$health)
+imputetraindataNA <- data.frame(sapply(trainimpute, function(x) as.numeric(as.character(x))))
+trainNA <- sapply(imputetraindataNA, function(x) sum(is.na(x)))
+any(trainNA >0 )
+
+fitcontrol <- trainControl(method="cv", number = 10)
+modelBoost <- train(health~., data = trainimpute, method="gbm", trControl=fitcontrol)
+#test <- read.csv("C://Users//abbym//Documents//STAT841//Kaggle Report//test.csv")
+
+
+testimpute <- impute(test, method="median/mode")
+imputetestdataNA <- data.frame(sapply(testimpute, function(x) as.numeric(as.character(x))))
+testNA <- sapply(imputetestdataNA, function(x) sum(is.na(x)))
+any(testNA >0 )
+
+BoostPred <- predict(modelBoost, newdata = testimpute, type = "prob")
+BoostPred2 <- cbind(test[ ,1, drop = FALSE], BoostPred)
+colnames(BoostPred2) <- c("uniqueid", "p1", "p2", "p3", "p4", "p5")
+write.csv(BoostPred2, paste("boostmod_", Sys.Date(), ".csv", sep = ''))
+
+# rm(list = ls())
+
+# #install package and load library
+# library(Hmisc)
+# library(missForest)
+# 
+# 
+# #missForest
+# 
+# library(missForest)
+# newdata$health <- as.factor(as.character(newdata$health)) 
+# #seed 10% missing values
+# data.mis <- prodNA(newdata, noNA = 0.1)
+# summary(data.mis)
+# 
+# #impute missing values, using all parameters as default values
+# data.imp <- missForest(data.mis)
+# 
+# #check imputed values
+# data.imp$ximp
+# 
+# #check imputation error
+# data.imp$OOBerror
+# 
+# 
+# #comparing actual data accuracy
+# data.err <- mixError(data.imp$ximp, data.mis, newdata)
+# data.err
+```
+

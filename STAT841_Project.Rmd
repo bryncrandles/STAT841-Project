@@ -1,0 +1,67 @@
+---
+title: ""
+output: pdf_document
+date: ''
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/Users/bryncrandles/Documents/STAT841/Winter/Project/stat-441-w2022-data-challenge/")
+pacman::p_load(caret, RANN, imputeMissings)
+```
+
+## 
+
+```{r load data}
+rm(list = ls())
+# load training data and testing data 
+train.data <- read.csv("train.csv")
+test.data <- read.csv("test.csv")
+all.data <- rbind(train.data[ , -1209], test.data)
+# 
+train.data <- data.frame(sapply(train.data, function(x) as.numeric(as.character(x))))
+str(train.data)
+
+
+na.data <- sapply(train.data, function(x) sum(is.na(x)))
+all.na <- unname(which(na.data == dim(train.data)[1]))
+
+# remove columns that have all NA
+train.data <- train.data[ , - all.na]
+
+unique.data <- sapply(train.data, function(x) unique(x))
+all.na <- unname(which(na.data == dim(train.data)[1]))
+
+# MEDIAN IMPUTATION 
+median.impute <- preProcess(train.data, method = "medianImpute")
+train.data.impute <- predict(median.impute, train.data)
+
+# pred.test <- data.frame(sapply(pred.test, function(x) as.numeric(as.character(x))))
+# na.data.pred.test <- sapply(pred.test, function(x) sum(is.na(x)))
+# 
+
+train.data.impute <- impute(train.data, method = "median/mode")
+na.train.data.impute <- data.frame(sapply(train.data.impute, function(x) as.numeric(as.character(x))))
+na.train.data <- sapply(na.train.data.impute, function(x) sum(is.na(x)))
+any(na.train.data > 0)
+
+# method of cross validation
+#fit.control <- trainControl(method = "repeatedcv", number = 10, repeats = 40)
+# boost.model <- train(health ~ ., data = train.data.impute, method = "gbm",
+#                  trControl = fit.control)
+
+fit.control <- trainControl(method = "cv", number = 10)
+multinomial.reg.model <- train(health ~ ., data = train.data.impute, method = "glmnet", family = "multinomial")
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
